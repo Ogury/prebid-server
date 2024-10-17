@@ -26,13 +26,34 @@ func Builder(_ openrtb_ext.BidderName, config config.Adapter, _ config.Server) (
 }
 
 func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
-	glog.Info("Ogury Adapter: request received")
+	headers := setHeaders(request)
 
-	headers := http.Header{}
-	headers.Add("Content-Type", "application/json;charset=utf-8")
-	headers.Add("User-Agent", request.Device.UA)
+	var errors []error
+	var bidderImpExt adapters.ExtImpBidder
+	var oguryExtParams openrtb_ext.ImpExtOgury
+	for i, imp := range request.Imp {
+		if err := json.Unmarshal(imp.Ext, &bidderImpExt); err != nil {
+			return nil, append(errors, &errortypes.BadInput{
+				Message: "Bidder extension not provided or can't be unmarshalled",
+			})
+		}
+		if err := json.Unmarshal(bidderImpExt.Bidder, &oguryExtParams); err != nil {
+			return nil, append(errors, &errortypes.BadInput{
+				Message: "Error while unmarshalling Ogury bidder extension",
+			})
+		}
 
-	headers.Add("X-Forwarded-For", request.Device.IP)
+		ext, err := json.Marshal(struct {
+			adapters.ExtImpBidder
+			openrtb_ext.ImpExtOgury
+		}{bidderImpExt, oguryExtParams})
+		if err != nil {
+			return nil, append(errors, &errortypes.BadInput{
+				Message: "Error while marshaling Imp.Ext bidder exension",
+			})
+		}
+		request.Imp[i].Ext = ext
+	}
 
 	requestJSON, err := json.Marshal(request)
 	if err != nil {
@@ -46,9 +67,26 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 		Headers: headers,
 		ImpIDs:  openrtb_ext.GetImpIDs(request.Imp),
 	}
+
+	glog.Info("Ogury Adapter: request received") // TODO: delete this
 	glog.Info(string(requestData.Body))
 
 	return []*adapters.RequestData{requestData}, nil
+
+}
+
+func setHeaders(request *openrtb2.BidRequest) http.Header {
+	headers := http.Header{}
+	headers.Add("Content-Type", "application/json;charset=utf-8")
+	if request.Device != nil {
+		if request.Device.IP != "" {
+			headers.Add("X-Forwarded-For", request.Device.IP)
+		}
+		if request.Device.UA != "" {
+			headers.Add("user-agent", request.Device.UA)
+		}
+	}
+	return headers
 
 }
 
