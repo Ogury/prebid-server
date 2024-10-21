@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/golang/glog"
 	"github.com/prebid/openrtb/v20/openrtb2"
@@ -28,6 +29,7 @@ func Builder(_ openrtb_ext.BidderName, config config.Adapter, _ config.Server) (
 func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	headers := setHeaders(request)
 
+	// map Ogury params to top of Ext object
 	var errors []error
 	var bidderImpExt adapters.ExtImpBidder
 	var oguryExtParams openrtb_ext.ImpExtOgury
@@ -53,6 +55,23 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 			})
 		}
 		request.Imp[i].Ext = ext
+	}
+
+	for _, imp := range request.Imp {
+		// Check if imp comes with bid floor amount defined in a foreign currency
+		if imp.BidFloor > 0 && imp.BidFloorCur != "" && strings.ToUpper(imp.BidFloorCur) != "USD" {
+
+			// Convert to US dollars
+			convertedValue, err := requestInfo.ConvertCurrency(imp.BidFloor, imp.BidFloorCur, "USD")
+			if err != nil {
+				return nil, []error{err}
+			}
+
+			// Update after conversion. All imp elements inside request.Imp are shallow copies
+			// therefore, their non-pointer values are not shared memory and are safe to modify.
+			imp.BidFloorCur = "USD"
+			imp.BidFloor = convertedValue
+		}
 	}
 
 	requestJSON, err := json.Marshal(request)
@@ -111,6 +130,7 @@ func getMediaTypeForBid(impressions []openrtb2.Imp, bid openrtb2.Bid) (openrtb_e
 }
 
 func (a oguryAdapter) MakeBids(request *openrtb2.BidRequest, _ *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
+	// TODO: delete all the info logs used in development
 	glog.Info("Ogury Adapter: response")
 	glog.Infof("Status: %v", responseData.StatusCode)
 	glog.Infof("Body: %v", string(responseData.Body))
