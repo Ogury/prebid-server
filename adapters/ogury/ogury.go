@@ -55,6 +55,10 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 			})
 		}
 		request.Imp[i].Ext = ext
+
+		if oguryExtParams.PublisherID != "" {
+			request.Imp[i].TagID = imp.ID
+		}
 	}
 
 	for _, imp := range request.Imp {
@@ -69,6 +73,7 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 
 			// Update after conversion. All imp elements inside request.Imp are shallow copies
 			// therefore, their non-pointer values are not shared memory and are safe to modify.
+			// TODO: this probably needs a fix like request.imp[i] =, check
 			imp.BidFloorCur = "USD"
 			imp.BidFloor = convertedValue
 		}
