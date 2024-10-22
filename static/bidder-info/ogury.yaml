@@ -1,5 +1,5 @@
 #endpoint: http://prebids2s.presage.com/api/header-bidding-request #TODO: enable before merging
-endpoint: "http://ms-bidder-bid.devc.cloud.ogury.io/api/header-bidding-request"
+endpoint: "http://ms-bidder-prebids2s.cluster.ogury.io/api/header-bidding-request"
 endpointCompression: gzip
 geoscope:
   - global
