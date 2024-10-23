@@ -29,11 +29,11 @@ func Builder(_ openrtb_ext.BidderName, config config.Adapter, _ config.Server) (
 func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	headers := setHeaders(request)
 
-	// map Ogury params to top of Ext object
 	var errors []error
 	var bidderImpExt adapters.ExtImpBidder
 	var oguryExtParams openrtb_ext.ImpExtOgury
 	for i, imp := range request.Imp {
+		// extract Ogury params
 		if err := json.Unmarshal(imp.Ext, &bidderImpExt); err != nil {
 			return nil, append(errors, &errortypes.BadInput{
 				Message: "Bidder extension not provided or can't be unmarshalled",
@@ -45,6 +45,7 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 			})
 		}
 
+		// map Ogury params to top of Ext object
 		ext, err := json.Marshal(struct {
 			adapters.ExtImpBidder
 			openrtb_ext.ImpExtOgury
@@ -61,7 +62,7 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 		}
 	}
 
-	for _, imp := range request.Imp {
+	for i, imp := range request.Imp {
 		// Check if imp comes with bid floor amount defined in a foreign currency
 		if imp.BidFloor > 0 && imp.BidFloorCur != "" && strings.ToUpper(imp.BidFloorCur) != "USD" {
 
@@ -74,8 +75,8 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 			// Update after conversion. All imp elements inside request.Imp are shallow copies
 			// therefore, their non-pointer values are not shared memory and are safe to modify.
 			// TODO: this probably needs a fix like request.imp[i] =, check
-			imp.BidFloorCur = "USD"
-			imp.BidFloor = convertedValue
+			request.Imp[i].BidFloorCur = "USD"
+			request.Imp[i].BidFloor = convertedValue
 		}
 	}
 
