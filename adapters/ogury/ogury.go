@@ -94,7 +94,8 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 	}
 
 	glog.Info("Ogury Adapter: request received") // TODO: delete this
-	glog.Info(string(requestData.Body))
+	glog.Info("[REQUEST] Headers: ", requestData.Headers)
+	glog.Info("[REQUEST] Body: ", string(requestData.Body))
 
 	return []*adapters.RequestData{requestData}, nil
 
@@ -138,9 +139,9 @@ func getMediaTypeForBid(impressions []openrtb2.Imp, bid openrtb2.Bid) (openrtb_e
 func (a oguryAdapter) MakeBids(request *openrtb2.BidRequest, _ *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
 	// TODO: delete all the info logs used in development
 	glog.Info("Ogury Adapter: response")
-	glog.Infof("Status: %v", responseData.StatusCode)
-	glog.Infof("Body: %v", string(responseData.Body))
-	glog.Infof("Headers: %+v", responseData.Headers)
+	glog.Infof("[RESPONSE] Status: %v", responseData.StatusCode)
+	glog.Infof("[RESPONSE] Body: %v", string(responseData.Body))
+	glog.Infof("[RESPONSE] Headers: %+v", responseData.Headers)
 
 	if responseData.StatusCode == http.StatusNoContent {
 		return nil, nil
