@@ -50,8 +50,7 @@
                 },
                 "bidType": "video",
                 "bidVideo": {
-                  "duration": 30,
-                  "primary_category": ""
+                  "duration": 30
                 }
               }
             ],
@@ -84,11 +83,7 @@
                   "meta": {
                   },
                   "bidid": "bid-appnexus-1",
-                  "type": "video",
-                  "video": {
-                    "duration": 30,
-                    "primary_category": ""
-                  }
+                  "type": "video"
                 }
               }
             }
