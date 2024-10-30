@@ -169,10 +169,6 @@ func (l *AgmaLogger) extractPublisherAndSite(requestWrapper *openrtb_ext.Request
 			publisherId = requestWrapper.App.Publisher.ID
 		}
 		appSiteId = requestWrapper.App.ID
-		if appSiteId == "" {
-			appSiteId = requestWrapper.App.Bundle
-		}
-
 	}
 	return publisherId, appSiteId
 }
