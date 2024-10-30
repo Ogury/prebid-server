@@ -178,11 +178,15 @@ func (l *AgmaLogger) extractPublisherAndSite(requestWrapper *openrtb_ext.Request
 }
 
 func (l *AgmaLogger) shouldTrackEvent(requestWrapper *openrtb_ext.RequestWrapper) (bool, string) {
-	if requestWrapper.User == nil {
+	userExt, err := requestWrapper.GetUserExt()
+	if err != nil || userExt == nil {
 		return false, ""
 	}
-	consentStr := requestWrapper.User.Consent
-
+	consent := userExt.GetConsent()
+	if consent == nil {
+		return false, ""
+	}
+	consentStr := *consent
 	parsedConsent, err := vendorconsent.ParseString(consentStr)
 	if err != nil {
 		return false, ""

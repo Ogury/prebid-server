@@ -35,12 +35,14 @@
       }
     ],
     "regs": {
-      "gdpr": 2
+      "ext": {
+        "gdpr": 2
+      }
     },
     "user": {
       "ext": {}
     }
   },
   "expectedReturnCode": 400,
-  "expectedErrorMessage": "Invalid request: request.regs.gdpr must be either 0 or 1\n"
+  "expectedErrorMessage": "Invalid request: request.regs.ext.gdpr must be either 0 or 1\n"
 }
