@@ -11,14 +11,10 @@ WORKDIR /app/prebid-server/
 ENV GOROOT=/usr/local/go
 ENV PATH=$GOROOT/bin:$PATH
 ENV GOPROXY="https://proxy.golang.org"
-
-# Installing gcc as cgo uses it to build native code of some modules
 RUN apt-get update && \
-    apt-get install -y git gcc && \
+    apt-get install -y git && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-# CGO must be enabled because some modules depend on native C code
-ENV CGO_ENABLED 1
+ENV CGO_ENABLED 0
 COPY ./ ./
 RUN go mod tidy
 RUN go mod vendor
@@ -34,10 +30,8 @@ RUN chmod a+xr prebid-server
 COPY static static/
 COPY stored_requests/data stored_requests/data
 RUN chmod -R a+r static/ stored_requests/data
-
-# Installing libatomic1 as it is a runtime dependency for some modules
 RUN apt-get update && \
-    apt-get install -y ca-certificates mtr libatomic1 && \
+    apt-get install -y ca-certificates mtr && \
     apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN adduser prebid_user
 USER prebid_user
