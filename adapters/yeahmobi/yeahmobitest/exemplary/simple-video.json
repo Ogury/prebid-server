@@ -96,8 +96,7 @@
           },
           "type": "video",
           "video": {
-            "duration": 300,
-            "primary_category": ""
+            "duration": 300
           }
         }
       ]

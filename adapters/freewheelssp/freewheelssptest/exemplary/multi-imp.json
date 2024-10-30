@@ -153,8 +153,7 @@
           },
           "type": "video",
           "video" : {
-            "duration" : 10,
-            "primary_category": ""
+            "duration" : 10
           }
         }
       ]
