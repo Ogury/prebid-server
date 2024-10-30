@@ -103,8 +103,8 @@ func TestGoodAmpRequests(t *testing.T) {
 				GDPR:           config.GDPR{Enabled: true},
 			}
 			if test.Config != nil {
-				cfg.BlockedApps = test.Config.BlockedApps
-				cfg.BlockedAppsLookup = test.Config.getBlockedAppLookup()
+				cfg.BlacklistedApps = test.Config.BlacklistedApps
+				cfg.BlacklistedAppMap = test.Config.getBlacklistedAppMap()
 				cfg.AccountRequired = test.Config.AccountRequired
 			}
 

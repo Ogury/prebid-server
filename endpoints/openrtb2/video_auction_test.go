@@ -814,15 +814,15 @@ func TestHandleError(t *testing.T) {
 				&errortypes.AccountDisabled{},
 			},
 			wantCode:          503,
-			wantMetricsStatus: metrics.RequestStatusBlockedApp,
+			wantMetricsStatus: metrics.RequestStatusBlacklisted,
 		},
 		{
 			description: "Blocked app - return 503 with blocked metrics status",
 			giveErrors: []error{
-				&errortypes.BlockedApp{},
+				&errortypes.BlacklistedApp{},
 			},
 			wantCode:          503,
-			wantMetricsStatus: metrics.RequestStatusBlockedApp,
+			wantMetricsStatus: metrics.RequestStatusBlacklisted,
 		},
 		{
 			description: "Account required error - return 400 with bad input metrics status",
