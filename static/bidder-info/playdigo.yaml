@@ -3,7 +3,6 @@ geoscope:
   - USA
 maintainer:
   email: "yr@playdigo.com"
-gvlVendorID: 1302
 capabilities:
   site:
     mediaTypes:
