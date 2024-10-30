@@ -37,9 +37,18 @@ func (adapter *adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *
 	for _, impression := range request.Imp {
 		var requestExt map[string]interface{}
 
-		if impression.BidFloorCur == "" || impression.BidFloor == 0 {
+		if impression.BidFloor == 0 {
+			errs = append(errs, &errortypes.BadInput{
+				Message: "BidFloor should be defined",
+			})
+			continue
+		}
+
+		if impression.BidFloorCur == "" {
 			impression.BidFloorCur = "USD"
-		} else if impression.BidFloorCur != "USD" {
+		}
+
+		if impression.BidFloorCur != "USD" {
 			convertedValue, err := requestInfo.ConvertCurrency(impression.BidFloor, impression.BidFloorCur, "USD")
 
 			if err != nil {
@@ -47,8 +56,8 @@ func (adapter *adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *
 				continue
 			}
 
-			impression.BidFloor = convertedValue
 			impression.BidFloorCur = "USD"
+			impression.BidFloor = convertedValue
 		}
 
 		if len(impression.Ext) == 0 {
