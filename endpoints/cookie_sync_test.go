@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -693,7 +692,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenCCPAEnabled: true,
 			expectedPrivacy:  macros.UserSyncPrivacy{},
 			expectedRequest: usersync.Request{
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -722,7 +720,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 					Enabled:        true,
 					PriorityGroups: [][]string{{"a", "b", "c"}},
 				},
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -751,7 +748,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 					Enabled:        false,
 					PriorityGroups: [][]string{{"a", "b", "c"}},
 				},
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -780,7 +776,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 					Enabled:        false,
 					PriorityGroups: [][]string{{"a", "b", "c"}},
 				},
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -809,7 +804,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 					Enabled:        false,
 					PriorityGroups: [][]string{{"a", "b", "c"}},
 				},
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -838,7 +832,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 					Enabled:        true,
 					PriorityGroups: [][]string{{"a", "b", "c"}},
 				},
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -867,7 +860,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 					Enabled:        true,
 					PriorityGroups: [][]string{{"a", "b", "c"}},
 				},
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -886,7 +878,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 			givenCCPAEnabled: true,
 			expectedPrivacy:  macros.UserSyncPrivacy{},
 			expectedRequest: usersync.Request{
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -907,7 +898,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 				USPrivacy: "1NYN",
 			},
 			expectedRequest: usersync.Request{
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -949,7 +939,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 				GDPR: "0",
 			},
 			expectedRequest: usersync.Request{
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -977,7 +966,6 @@ func TestCookieSyncParseRequest(t *testing.T) {
 				GDPR: "",
 			},
 			expectedRequest: usersync.Request{
-				Limit: math.MaxInt,
 				Privacy: usersyncPrivacy{
 					gdprPermissions: &fakePermissions{},
 					activityRequest: emptyActivityPoliciesRequest,
@@ -1147,242 +1135,152 @@ func TestCookieSyncParseRequest(t *testing.T) {
 	}
 }
 
-func TestGetEffectiveLimit(t *testing.T) {
-	intNegative := ptrutil.ToPtr(-1)
-	int0 := ptrutil.ToPtr(0)
-	int30 := ptrutil.ToPtr(30)
-	int40 := ptrutil.ToPtr(40)
-	intMax := ptrutil.ToPtr(math.MaxInt)
-
-	tests := []struct {
-		name          string
-		reqLimit      *int
-		defaultLimit  *int
-		expectedLimit int
-	}{
-		{
-			name:          "nil",
-			reqLimit:      nil,
-			defaultLimit:  nil,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "req_limit_negative",
-			reqLimit:      intNegative,
-			defaultLimit:  nil,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "req_limit_zero",
-			reqLimit:      int0,
-			defaultLimit:  nil,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "req_limit_in_range",
-			reqLimit:      int30,
-			defaultLimit:  nil,
-			expectedLimit: 30,
-		},
-		{
-			name:          "req_limit_at_max",
-			reqLimit:      intMax,
-			defaultLimit:  nil,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "default_limit_negative",
-			reqLimit:      nil,
-			defaultLimit:  intNegative,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "default_limit_zero",
-			reqLimit:      nil,
-			defaultLimit:  intNegative,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "default_limit_in_range",
-			reqLimit:      nil,
-			defaultLimit:  int30,
-			expectedLimit: 30,
-		},
-		{
-			name:          "default_limit_at_max",
-			reqLimit:      nil,
-			defaultLimit:  intMax,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "both_in_range",
-			reqLimit:      int30,
-			defaultLimit:  int40,
-			expectedLimit: 30,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := getEffectiveLimit(test.reqLimit, test.defaultLimit)
-			assert.Equal(t, test.expectedLimit, result)
-		})
-	}
-}
-
-func TestGetEffectiveMaxLimit(t *testing.T) {
-	intNegative := ptrutil.ToPtr(-1)
-	int0 := ptrutil.ToPtr(0)
-	int30 := ptrutil.ToPtr(30)
-	intMax := ptrutil.ToPtr(math.MaxInt)
-
-	tests := []struct {
-		name          string
-		maxLimit      *int
-		expectedLimit int
-	}{
-		{
-			name:          "nil",
-			maxLimit:      nil,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "req_limit_negative",
-			maxLimit:      intNegative,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "req_limit_zero",
-			maxLimit:      int0,
-			expectedLimit: math.MaxInt,
-		},
-		{
-			name:          "req_limit_in_range",
-			maxLimit:      int30,
-			expectedLimit: 30,
-		},
-		{
-			name:          "req_limit_too_large",
-			maxLimit:      intMax,
-			expectedLimit: math.MaxInt,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			result := getEffectiveMaxLimit(test.maxLimit)
-			assert.Equal(t, test.expectedLimit, result)
-		})
-	}
-}
-
 func TestSetLimit(t *testing.T) {
-	intNegative := ptrutil.ToPtr(-1)
-	int0 := ptrutil.ToPtr(0)
-	int10 := ptrutil.ToPtr(10)
-	int20 := ptrutil.ToPtr(20)
-	int30 := ptrutil.ToPtr(30)
-	intMax := ptrutil.ToPtr(math.MaxInt)
+	intNegative1 := -1
+	int20 := 20
+	int30 := 30
+	int40 := 40
 
-	tests := []struct {
-		name            string
+	testCases := []struct {
+		description     string
 		givenRequest    cookieSyncRequest
 		givenAccount    *config.Account
 		expectedRequest cookieSyncRequest
 	}{
 		{
-			name: "nil_limits",
+			description: "Default Limit is Applied (request limit = 0)",
 			givenRequest: cookieSyncRequest{
-				Limit: nil,
+				Limit: 0,
+			},
+			givenAccount: &config.Account{
+				CookieSync: config.CookieSync{
+					DefaultLimit: &int20,
+				},
+			},
+			expectedRequest: cookieSyncRequest{
+				Limit: 20,
+			},
+		},
+		{
+			description: "Default Limit is Not Applied (default limit not set)",
+			givenRequest: cookieSyncRequest{
+				Limit: 0,
 			},
 			givenAccount: &config.Account{
 				CookieSync: config.CookieSync{
 					DefaultLimit: nil,
-					MaxLimit:     nil,
 				},
 			},
 			expectedRequest: cookieSyncRequest{
-				Limit: intMax,
+				Limit: 0,
 			},
 		},
 		{
-			name: "limit_negative",
+			description: "Default Limit is Not Applied (request limit > 0)",
 			givenRequest: cookieSyncRequest{
-				Limit: intNegative,
+				Limit: 10,
 			},
 			givenAccount: &config.Account{
 				CookieSync: config.CookieSync{
-					DefaultLimit: int20,
+					DefaultLimit: &int20,
 				},
 			},
 			expectedRequest: cookieSyncRequest{
-				Limit: intMax,
+				Limit: 10,
 			},
 		},
 		{
-			name: "limit_zero",
+			description: "Max Limit is Applied (request limit <= 0)",
 			givenRequest: cookieSyncRequest{
-				Limit: int0,
+				Limit: 0,
 			},
 			givenAccount: &config.Account{
 				CookieSync: config.CookieSync{
-					DefaultLimit: int20,
+					MaxLimit: &int30,
 				},
 			},
 			expectedRequest: cookieSyncRequest{
-				Limit: intMax,
+				Limit: 30,
 			},
 		},
 		{
-			name: "limit_less_than_max",
+			description: "Max Limit is Applied (0 < max < limit)",
 			givenRequest: cookieSyncRequest{
-				Limit: int10,
+				Limit: 40,
 			},
 			givenAccount: &config.Account{
 				CookieSync: config.CookieSync{
-					DefaultLimit: int20,
-					MaxLimit:     int30,
+					MaxLimit: &int30,
 				},
 			},
 			expectedRequest: cookieSyncRequest{
-				Limit: int10,
+				Limit: 30,
 			},
 		},
 		{
-			name: "limit_greater_than_max",
+			description: "Max Limit is Not Applied (max not set)",
 			givenRequest: cookieSyncRequest{
-				Limit: int30,
+				Limit: 10,
 			},
 			givenAccount: &config.Account{
 				CookieSync: config.CookieSync{
-					DefaultLimit: int20,
-					MaxLimit:     int10,
+					MaxLimit: nil,
 				},
 			},
 			expectedRequest: cookieSyncRequest{
-				Limit: int10,
+				Limit: 10,
 			},
 		},
 		{
-			name: "limit_at_max",
+			description: "Max Limit is Not Applied (0 < limit < max)",
 			givenRequest: cookieSyncRequest{
-				Limit: intMax,
+				Limit: 10,
 			},
 			givenAccount: &config.Account{
-				CookieSync: config.CookieSync{},
+				CookieSync: config.CookieSync{
+					MaxLimit: &int30,
+				},
 			},
 			expectedRequest: cookieSyncRequest{
-				Limit: intMax,
+				Limit: 10,
+			},
+		},
+		{
+			description: "Max Limit is Applied After applying the default",
+			givenRequest: cookieSyncRequest{
+				Limit: 0,
+			},
+			givenAccount: &config.Account{
+				CookieSync: config.CookieSync{
+					DefaultLimit: &int40,
+					MaxLimit:     &int30,
+				},
+			},
+			expectedRequest: cookieSyncRequest{
+				Limit: 30,
+			},
+		},
+		{
+			description: "Negative Value Check",
+			givenRequest: cookieSyncRequest{
+				Limit: 0,
+			},
+			givenAccount: &config.Account{
+				CookieSync: config.CookieSync{
+					DefaultLimit: &intNegative1,
+					MaxLimit:     &intNegative1,
+				},
+			},
+			expectedRequest: cookieSyncRequest{
+				Limit: 0,
 			},
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			endpoint := cookieSyncEndpoint{}
-			request := endpoint.setLimit(test.givenRequest, test.givenAccount.CookieSync)
-			assert.Equal(t, test.expectedRequest, request)
-		})
+	for _, test := range testCases {
+		endpoint := cookieSyncEndpoint{}
+		request := endpoint.setLimit(test.givenRequest, test.givenAccount.CookieSync)
+		assert.Equal(t, test.expectedRequest, request, test.description)
 	}
 }
 
