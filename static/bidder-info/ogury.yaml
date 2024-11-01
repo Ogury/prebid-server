@@ -5,7 +5,7 @@ geoscope:
 maintainer:
   email: deliveryservices@ogury.co
 gvlVendorID: 31
-modifyingVastXmlAllowed: true # TODO: check what is this
+modifyingVastXmlAllowed: true
 capabilities:
   site:
     mediaTypes:

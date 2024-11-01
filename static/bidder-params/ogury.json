@@ -17,7 +17,7 @@
     },
     "publisherId": {
       "type": "string",
-      "minLength": 1,
+      "format": "uuid",
       "description": "Ogury provided publisher id."
     }
   },

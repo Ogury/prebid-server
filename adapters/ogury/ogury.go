@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/golang/glog"
 	"github.com/prebid/openrtb/v20/openrtb2"
 
 	"github.com/prebid/prebid-server/v2/adapters"
@@ -74,7 +73,6 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 
 			// Update after conversion. All imp elements inside request.Imp are shallow copies
 			// therefore, their non-pointer values are not shared memory and are safe to modify.
-			// TODO: this probably needs a fix like request.imp[i] =, check
 			request.Imp[i].BidFloorCur = "USD"
 			request.Imp[i].BidFloor = convertedValue
 		}
@@ -92,10 +90,6 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 		Headers: headers,
 		ImpIDs:  openrtb_ext.GetImpIDs(request.Imp),
 	}
-
-	glog.Info("Ogury Adapter: request received") // TODO: delete this
-	glog.Info("[REQUEST] Headers: ", requestData.Headers)
-	glog.Info("[REQUEST] Body: ", string(requestData.Body))
 
 	return []*adapters.RequestData{requestData}, nil
 
@@ -134,12 +128,6 @@ func getMediaTypeForBid(impressions []openrtb2.Imp, bid openrtb2.Bid) (openrtb_e
 }
 
 func (a oguryAdapter) MakeBids(request *openrtb2.BidRequest, _ *adapters.RequestData, responseData *adapters.ResponseData) (*adapters.BidderResponse, []error) {
-	// TODO: delete all the info logs used in development
-	glog.Info("Ogury Adapter: response")
-	glog.Infof("[RESPONSE] Status: %v", responseData.StatusCode)
-	glog.Infof("[RESPONSE] Body: %v", string(responseData.Body))
-	glog.Infof("[RESPONSE] Headers: %+v", responseData.Headers)
-
 	if responseData.StatusCode == http.StatusNoContent {
 		return nil, nil
 	}
