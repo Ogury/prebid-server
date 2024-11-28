@@ -28,12 +28,8 @@ func Builder(_ openrtb_ext.BidderName, config config.Adapter, _ config.Server) (
 func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	headers := setHeaders(request)
 
-	validImps := filterValidImps(request)
-	// if we have imp with assetKey/adUnitId then we want to serve them
-	if len(validImps) > 0 {
-		request.Imp = validImps
-	} else if request.Site == nil || request.Site.Publisher.ID == "" {
-		// else check publisher.ID, if there is pubID then use every adUnit
+	request.Imp = filterValidImps(request)
+	if len(request.Imp) == 0 {
 		return nil, []error{&errortypes.BadInput{
 			Message: "Invalid request. assetKey/adUnitId or request.site.publisher.id required",
 		}}
@@ -49,7 +45,7 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 			})
 		}
 		// find Ogury bidder params
-		if bidder, ok := impExt["bidder"]; ok {
+		if bidder, ok := impExt[openrtb_ext.PrebidExtBidderKey]; ok {
 			if err := json.Unmarshal(bidder, &impExtBidderHoist); err != nil {
 				return nil, append(errors, &errortypes.BadInput{
 					Message: "Ogury bidder extension not provided or can't be unmarshalled",
@@ -61,7 +57,7 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 
 		// extract Ogury "bidder" params from imp.ext.bidder to imp.ext
 		for key, value := range impExt {
-			if key != "bidder" {
+			if key != openrtb_ext.PrebidExtBidderKey {
 				impExtOut[key] = value
 			}
 		}
@@ -135,7 +131,19 @@ func filterValidImps(request *openrtb2.BidRequest) (validImps []openrtb2.Imp) {
 			validImps = append(validImps, imp)
 		}
 	}
-	return validImps
+
+	// if we have imp with assetKey/adUnitId then we want to serve them
+	if len(validImps) > 0 {
+		return validImps
+	}
+
+	// no assetKey/adUnitId imps then we serve everything if publisher.ID exists
+	if request.Site != nil && request.Site.Publisher.ID != "" {
+		return request.Imp
+	}
+
+	// else no valid imp
+	return nil
 }
 
 func getAdUnitCode(ext map[string]json.RawMessage) string {
