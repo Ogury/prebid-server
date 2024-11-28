@@ -30,16 +30,14 @@ func (a oguryAdapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *ad
 
 	validImps := filterValidImps(request)
 	// if we have imp with assetKey/adUnitId then we want to serve them
-	if len(validImps) == 0 {
-		if request.Site == nil || request.Site.Publisher.ID == "" {
-			return nil, []error{&errortypes.BadInput{
-				Message: "Invalid request. assetKey/adUnitId or request.site.publisher.id required",
-			}}
-		}
-		// if there are no imps with assetKey/adUnitId then we serve with publisher.Id
-		validImps = request.Imp
+	if len(validImps) > 0 {
+		request.Imp = validImps
+	} else if request.Site == nil || request.Site.Publisher.ID == "" {
+		// else check publisher.ID, if there is pubID then use every adUnit
+		return nil, []error{&errortypes.BadInput{
+			Message: "Invalid request. assetKey/adUnitId or request.site.publisher.id required",
+		}}
 	}
-	request.Imp = validImps
 
 	var errors []error
 	for i, imp := range request.Imp {
