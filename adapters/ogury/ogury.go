@@ -146,23 +146,20 @@ func buildHeaders(request *openrtb2.BidRequest) http.Header {
 
 }
 
-func getMediaTypeForBid(impressions []openrtb2.Imp, bid openrtb2.Bid) (openrtb_ext.BidType, error) {
-	for _, imp := range impressions {
-		if imp.ID == bid.ImpID {
-			switch {
-			case imp.Banner != nil:
-				return openrtb_ext.BidTypeBanner, nil
-			case imp.Video != nil:
-				return openrtb_ext.BidTypeVideo, nil
-			case imp.Native != nil:
-				return openrtb_ext.BidTypeNative, nil
-			}
+func getMediaTypeForBid(bid openrtb2.Bid) (openrtb_ext.BidType, error) {
+	switch bid.MType {
+	case openrtb2.MarkupBanner:
+		return openrtb_ext.BidTypeBanner, nil
+	case openrtb2.MarkupAudio:
+		return openrtb_ext.BidTypeAudio, nil
+	case openrtb2.MarkupNative:
+		return openrtb_ext.BidTypeNative, nil
+	case openrtb2.MarkupVideo:
+		return openrtb_ext.BidTypeVideo, nil
+	default:
+		return "", &errortypes.BadServerResponse{
+			Message: fmt.Sprintf("Unsupported MType \"%d\", for impression \"%s\"", bid.MType, bid.ImpID),
 		}
-
-	}
-
-	return "", &errortypes.BadServerResponse{
-		Message: fmt.Sprintf("Failed to determine media type of impression \"%s\"", bid.ImpID),
 	}
 }
 
@@ -184,7 +181,7 @@ func (a adapter) MakeBids(request *openrtb2.BidRequest, _ *adapters.RequestData,
 	var errors []error
 	for _, seatBid := range response.SeatBid {
 		for i, bid := range seatBid.Bid {
-			bidType, err := getMediaTypeForBid(request.Imp, bid)
+			bidType, err := getMediaTypeForBid(bid)
 			if err != nil {
 				errors = append(errors, err)
 				continue

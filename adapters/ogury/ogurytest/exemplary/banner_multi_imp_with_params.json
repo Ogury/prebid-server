@@ -106,7 +106,8 @@
                 "adm": "adm string",
                 "crid": "crid_10",
                 "h": 100,
-                "w": 128
+                "w": 128,
+                "mtype": 1
               }]
             }
           ]
@@ -127,7 +128,8 @@
             "adm": "adm string",
             "crid": "crid_10",
             "h": 100,
-            "w": 128
+            "w": 128,
+            "mtype": 1
           },
           "type": "banner"
         }
