@@ -12,6 +12,7 @@ import (
 	"github.com/prebid/prebid-server/v3/config"
 	"github.com/prebid/prebid-server/v3/errortypes"
 	"github.com/prebid/prebid-server/v3/openrtb_ext"
+	"github.com/prebid/prebid-server/v3/util/jsonutil"
 )
 
 type adapter struct {
@@ -36,14 +37,14 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 	for i, imp := range request.Imp {
 		var impExt, impExtBidderHoist map[string]json.RawMessage
 		// extract ext
-		if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
+		if err := jsonutil.Unmarshal(imp.Ext, &impExt); err != nil {
 			return nil, append(errors, &errortypes.BadInput{
 				Message: "Bidder extension not provided or can't be unmarshalled",
 			})
 		}
 		// find Ogury bidder params
 		if bidder, ok := impExt[openrtb_ext.PrebidExtBidderKey]; ok {
-			if err := json.Unmarshal(bidder, &impExtBidderHoist); err != nil {
+			if err := jsonutil.Unmarshal(bidder, &impExtBidderHoist); err != nil {
 				return nil, append(errors, &errortypes.BadInput{
 					Message: "Ogury bidder extension not provided or can't be unmarshalled",
 				})
@@ -63,7 +64,7 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 			newImpExt[key] = value
 		}
 
-		ext, err := json.Marshal(newImpExt)
+		ext, err := jsonutil.Marshal(newImpExt)
 		if err != nil {
 			return nil, append(errors, &errortypes.BadInput{
 				Message: "Error while marshaling Imp.Ext bidder exension",
@@ -93,7 +94,7 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 		}
 	}
 
-	requestJSON, err := json.Marshal(request)
+	requestJSON, err := jsonutil.Marshal(request)
 	if err != nil {
 		return nil, []error{err}
 	}
@@ -115,10 +116,10 @@ func filterValidImps(request *openrtb2.BidRequest) (validImps []openrtb2.Imp) {
 		var impExt adapters.ExtImpBidder
 		var impExtOgury openrtb_ext.ImpExtOgury
 
-		if err := json.Unmarshal(imp.Ext, &impExt); err != nil {
+		if err := jsonutil.Unmarshal(imp.Ext, &impExt); err != nil {
 			continue
 		}
-		if err := json.Unmarshal(impExt.Bidder, &impExtOgury); err != nil {
+		if err := jsonutil.Unmarshal(impExt.Bidder, &impExtOgury); err != nil {
 			continue
 		}
 		if impExtOgury.AssetKey != "" && impExtOgury.AdUnitID != "" {
@@ -181,7 +182,7 @@ func (a adapter) MakeBids(request *openrtb2.BidRequest, _ *adapters.RequestData,
 	}
 
 	var response openrtb2.BidResponse
-	if err := json.Unmarshal(responseData.Body, &response); err != nil {
+	if err := jsonutil.Unmarshal(responseData.Body, &response); err != nil {
 		return nil, []error{err}
 	}
 
