@@ -51,20 +51,12 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 			}
 		}
 
-		newImpExt := make(map[string]any, len(impExt)-1+len(impExtBidderHoist))
-
-		// copy every imp.ext field to the new "ext" object except for imp.ext.bidder
-		for key, value := range impExt {
-			if key != openrtb_ext.PrebidExtBidderKey {
-				newImpExt[key] = value
-			}
-		}
-		// extract Ogury params from imp.ext.bidder to imp.ext
+		// extract every value from imp[].ext.bidder to imp[].ext
 		for key, value := range impExtBidderHoist {
-			newImpExt[key] = value
+			impExt[key] = value
 		}
 
-		ext, err := jsonutil.Marshal(newImpExt)
+		ext, err := jsonutil.Marshal(impExt)
 		if err != nil {
 			return nil, append(errors, &errortypes.BadInput{
 				Message: "Error while marshaling Imp.Ext bidder exension",

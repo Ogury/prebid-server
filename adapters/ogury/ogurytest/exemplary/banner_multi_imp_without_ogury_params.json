@@ -13,8 +13,7 @@
           "format": [{"w": 128, "h": 100}]
         },
         "ext": {
-          "gpid": "global position id",
-          "bidder": {}
+          "gpid": "global position id"
         }
       },
       {
@@ -22,7 +21,7 @@
         "banner": {
           "format": [{"w": 128, "h": 100}]
         },
-        "ext": {"bidder": {}}
+        "ext": {}
       }
     ]
   },

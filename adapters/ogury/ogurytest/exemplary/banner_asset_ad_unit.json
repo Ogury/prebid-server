@@ -34,7 +34,11 @@
               "ext": {
                 "gpid": "global position id",
                 "assetKey": "OGY",
-                "adUnitId": "123"
+                "adUnitId": "123",
+                "bidder": {
+                  "assetKey": "OGY",
+                  "adUnitId": "123"
+                }
               }
             }
           ]
