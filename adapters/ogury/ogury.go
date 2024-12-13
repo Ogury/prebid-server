@@ -24,7 +24,7 @@ func Builder(_ openrtb_ext.BidderName, config config.Adapter, _ config.Server) (
 }
 
 func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
-	headers := setHeaders(request)
+	headers := buildHeaders(request)
 
 	request.Imp = filterValidImps(request)
 	if len(request.Imp) == 0 {
@@ -133,11 +133,12 @@ func filterValidImps(request *openrtb2.BidRequest) (validImps []openrtb2.Imp) {
 	return nil
 }
 
-func setHeaders(request *openrtb2.BidRequest) http.Header {
+func buildHeaders(request *openrtb2.BidRequest) http.Header {
 	headers := http.Header{}
 	headers.Add("Content-Type", "application/json;charset=utf-8")
 	if request.Device != nil {
 		headers.Add("X-Forwarded-For", request.Device.IP)
+		headers.Add("X-Forwarded-For", request.Device.IPv6)
 		headers.Add("User-Agent", request.Device.UA)
 		headers.Add("Accept-Language", request.Device.Language)
 	}
