@@ -66,10 +66,8 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 
 		// save adUnitCode
 		request.Imp[i].TagID = imp.ID
-	}
 
-	// currency conversion
-	for i, imp := range request.Imp {
+		// currency conversion
 		// Check if imp comes with bid floor amount defined in a foreign currency
 		if imp.BidFloor > 0 && imp.BidFloorCur != "" && strings.ToUpper(imp.BidFloorCur) != "USD" {
 
