@@ -27,7 +27,7 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 	headers := buildHeaders(request)
 
 	var errors []error
-	withOguryParams := false
+	var impsWithOguryParams []openrtb2.Imp
 	for i, imp := range request.Imp {
 		var impExt, impExtBidderHoist map[string]json.RawMessage
 		// extract ext
@@ -42,13 +42,6 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 				return nil, append(errors, &errortypes.BadInput{
 					Message: "Ogury bidder extension not provided or can't be unmarshalled",
 				})
-			} else if !withOguryParams {
-				// check if request has assetKey/adUnitId
-				_, hasAssetKey := impExtBidderHoist["assetKey"]
-				_, hasAdUnitId := impExtBidderHoist["adUnitId"]
-				if hasAssetKey && hasAdUnitId {
-					withOguryParams = true
-				}
 			}
 		}
 
@@ -83,12 +76,21 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 			request.Imp[i].BidFloorCur = "USD"
 			request.Imp[i].BidFloor = convertedValue
 		}
+
+		// check if imp has ogury params and filter it
+		_, hasAssetKey := impExtBidderHoist["assetKey"]
+		_, hasAdUnitId := impExtBidderHoist["adUnitId"]
+		if hasAssetKey && hasAdUnitId {
+			impsWithOguryParams = append(impsWithOguryParams, request.Imp[i])
+		}
 	}
 
-	if !withOguryParams && (request.Site == nil || request.Site.Publisher.ID == "") {
+	if len(impsWithOguryParams) == 0 && (request.Site == nil || request.Site.Publisher.ID == "") {
 		return nil, []error{&errortypes.BadInput{
 			Message: "Invalid request. assetKey/adUnitId or request.site.publisher.id required",
 		}}
+	} else if len(impsWithOguryParams) > 0 && len(impsWithOguryParams) < len(request.Imp) {
+		request.Imp = impsWithOguryParams
 	}
 
 	requestJSON, err := jsonutil.Marshal(request)
