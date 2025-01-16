@@ -26,14 +26,8 @@ func Builder(_ openrtb_ext.BidderName, config config.Adapter, _ config.Server) (
 func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
 	headers := buildHeaders(request)
 
-	request.Imp = filterValidImps(request)
-	if len(request.Imp) == 0 {
-		return nil, []error{&errortypes.BadInput{
-			Message: "Invalid request. assetKey/adUnitId or request.site.publisher.id required",
-		}}
-	}
-
 	var errors []error
+	withOguryParams := false
 	for i, imp := range request.Imp {
 		var impExt, impExtBidderHoist map[string]json.RawMessage
 		// extract ext
@@ -48,6 +42,13 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 				return nil, append(errors, &errortypes.BadInput{
 					Message: "Ogury bidder extension not provided or can't be unmarshalled",
 				})
+			} else if !withOguryParams {
+				// check if request has assetKey/adUnitId
+				_, hasAssetKey := impExtBidderHoist["assetKey"]
+				_, hasAdUnitId := impExtBidderHoist["adUnitId"]
+				if hasAssetKey && hasAdUnitId {
+					withOguryParams = true
+				}
 			}
 		}
 
@@ -84,6 +85,12 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 		}
 	}
 
+	if !withOguryParams && (request.Site == nil || request.Site.Publisher.ID == "") {
+		return nil, []error{&errortypes.BadInput{
+			Message: "Invalid request. assetKey/adUnitId or request.site.publisher.id required",
+		}}
+	}
+
 	requestJSON, err := jsonutil.Marshal(request)
 	if err != nil {
 		return nil, []error{err}
@@ -99,36 +106,6 @@ func (a adapter) MakeRequests(request *openrtb2.BidRequest, requestInfo *adapter
 
 	return []*adapters.RequestData{requestData}, nil
 
-}
-
-func filterValidImps(request *openrtb2.BidRequest) (validImps []openrtb2.Imp) {
-	for _, imp := range request.Imp {
-		var impExt adapters.ExtImpBidder
-		var impExtOgury openrtb_ext.ImpExtOgury
-
-		if err := jsonutil.Unmarshal(imp.Ext, &impExt); err != nil {
-			continue
-		}
-		if err := jsonutil.Unmarshal(impExt.Bidder, &impExtOgury); err != nil {
-			continue
-		}
-		if impExtOgury.AssetKey != "" && impExtOgury.AdUnitID != "" {
-			validImps = append(validImps, imp)
-		}
-	}
-
-	// if we have imp with assetKey/adUnitId then we want to serve them
-	if len(validImps) > 0 {
-		return validImps
-	}
-
-	// no assetKey/adUnitId imps then we serve everything if publisher.ID exists
-	if request.Site != nil && request.Site.Publisher.ID != "" {
-		return request.Imp
-	}
-
-	// else no valid imp
-	return nil
 }
 
 func buildHeaders(request *openrtb2.BidRequest) http.Header {

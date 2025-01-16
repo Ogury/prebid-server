@@ -72,6 +72,14 @@
               }
             },
             {
+              "id": "test-imp-id-2",
+              "tagid": "test-imp-id-2",
+              "banner": {
+                "format": [{"w": 128, "h": 100}]
+              },
+              "ext": {"bidder": {}}
+            },
+            {
               "id":"test-imp-id-3",
               "tagid": "test-imp-id-3",
               "banner": {
@@ -89,7 +97,7 @@
             }
           ]
         },
-        "impIDs":["test-imp-id", "test-imp-id-3"]
+        "impIDs":["test-imp-id", "test-imp-id-2", "test-imp-id-3"]
       },
       "mockResponse": {
         "status": 200,
