@@ -9,13 +9,13 @@ import (
 	"text/template"
 
 	"github.com/prebid/openrtb/v20/openrtb2"
-	"github.com/prebid/prebid-server/v3/adapters"
-	"github.com/prebid/prebid-server/v3/config"
-	"github.com/prebid/prebid-server/v3/errortypes"
-	"github.com/prebid/prebid-server/v3/macros"
-	"github.com/prebid/prebid-server/v3/openrtb_ext"
-	"github.com/prebid/prebid-server/v3/util/jsonutil"
-	"github.com/prebid/prebid-server/v3/util/ptrutil"
+	"github.com/prebid/prebid-server/v4/adapters"
+	"github.com/prebid/prebid-server/v4/config"
+	"github.com/prebid/prebid-server/v4/errortypes"
+	"github.com/prebid/prebid-server/v4/macros"
+	"github.com/prebid/prebid-server/v4/openrtb_ext"
+	"github.com/prebid/prebid-server/v4/util/jsonutil"
+	"github.com/prebid/prebid-server/v4/util/ptrutil"
 )
 
 type adapter struct {
@@ -99,8 +99,9 @@ func (a *adapter) MakeBids(bidReq *openrtb2.BidRequest, reqData *adapters.Reques
 				return nil, []error{err}
 			}
 			resp.Bids = append(resp.Bids, &adapters.TypedBid{
-				Bid:     bid,
-				BidType: bidType,
+				Bid:      bid,
+				BidType:  bidType,
+				BidVideo: getBidVideo(bid),
 			})
 		}
 	}
@@ -175,6 +176,17 @@ func getBidType(bid *openrtb2.Bid) (openrtb_ext.BidType, error) {
 			Message: fmt.Sprintf("Unsupported MType %d", bid.MType),
 		}
 	}
+}
+
+func getBidVideo(bid *openrtb2.Bid) *openrtb_ext.ExtBidPrebidVideo {
+	bidVideo := openrtb_ext.ExtBidPrebidVideo{}
+	if len(bid.Cat) > 0 {
+		bidVideo.PrimaryCategory = bid.Cat[0]
+	}
+	if bid.Dur > 0 {
+		bidVideo.Duration = int(bid.Dur)
+	}
+	return &bidVideo
 }
 
 // Builder builds a new instance of the MetaX adapter for the given bidder with the given config.

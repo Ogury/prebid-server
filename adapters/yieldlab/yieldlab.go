@@ -12,12 +12,12 @@ import (
 	"golang.org/x/text/currency"
 
 	"github.com/prebid/openrtb/v20/openrtb2"
-	"github.com/prebid/prebid-server/v3/adapters"
-	"github.com/prebid/prebid-server/v3/config"
-	"github.com/prebid/prebid-server/v3/errortypes"
-	"github.com/prebid/prebid-server/v3/openrtb_ext"
-	"github.com/prebid/prebid-server/v3/util/jsonutil"
-	"github.com/prebid/prebid-server/v3/util/ptrutil"
+	"github.com/prebid/prebid-server/v4/adapters"
+	"github.com/prebid/prebid-server/v4/config"
+	"github.com/prebid/prebid-server/v4/errortypes"
+	"github.com/prebid/prebid-server/v4/openrtb_ext"
+	"github.com/prebid/prebid-server/v4/util/jsonutil"
+	"github.com/prebid/prebid-server/v4/util/ptrutil"
 )
 
 // YieldlabAdapter connects the Yieldlab API to prebid server
@@ -86,7 +86,7 @@ func (a *YieldlabAdapter) makeEndpointURL(req *openrtb2.BidRequest, params *open
 		q.Set("gdpr", gdpr)
 	}
 	if consent != "" {
-		q.Set("consent", consent)
+		q.Set("gdpr_consent", consent)
 	}
 
 	if req.Source != nil && req.Source.Ext != nil {
@@ -363,14 +363,15 @@ func (a *YieldlabAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externa
 			}
 
 			responseBid := &openrtb2.Bid{
-				ID:     strconv.FormatUint(bid.ID, 10),
-				Price:  float64(bid.Price) / 100,
-				ImpID:  imp.ID,
-				CrID:   a.makeCreativeID(req, bid),
-				DealID: strconv.FormatUint(bid.Pid, 10),
-				W:      int64(width),
-				H:      int64(height),
-				Ext:    extJson,
+				ID:      strconv.FormatUint(bid.ID, 10),
+				Price:   float64(bid.Price) / 100,
+				ImpID:   imp.ID,
+				CrID:    a.makeCreativeID(req, bid),
+				DealID:  strconv.FormatUint(bid.Pid, 10),
+				W:       int64(width),
+				H:       int64(height),
+				ADomain: []string{bid.Advertiser},
+				Ext:     extJson,
 			}
 
 			var bidType openrtb_ext.BidType
@@ -448,7 +449,7 @@ func (a *YieldlabAdapter) makeAdSourceURL(req *openrtb2.BidRequest, ext *openrtb
 	gdpr, consent, err := a.getGDPR(req)
 	if err == nil && gdpr != "" && consent != "" {
 		val.Set("gdpr", gdpr)
-		val.Set("consent", consent)
+		val.Set("gdpr_consent", consent)
 	}
 
 	return fmt.Sprintf(adSourceURL, ext.AdslotID, ext.SupplyID, res.Adsize, val.Encode())

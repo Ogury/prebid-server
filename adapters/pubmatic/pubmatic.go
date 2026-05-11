@@ -9,12 +9,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/prebid/prebid-server/v3/adapters"
-	"github.com/prebid/prebid-server/v3/config"
-	"github.com/prebid/prebid-server/v3/errortypes"
-	"github.com/prebid/prebid-server/v3/openrtb_ext"
-	"github.com/prebid/prebid-server/v3/util/jsonutil"
-	"github.com/prebid/prebid-server/v3/util/ptrutil"
+	"github.com/prebid/prebid-server/v4/adapters"
+	"github.com/prebid/prebid-server/v4/config"
+	"github.com/prebid/prebid-server/v4/errortypes"
+	"github.com/prebid/prebid-server/v4/openrtb_ext"
+	"github.com/prebid/prebid-server/v4/util/jsonutil"
+	"github.com/prebid/prebid-server/v4/util/ptrutil"
 
 	"github.com/buger/jsonparser"
 	"github.com/prebid/openrtb/v20/openrtb2"
@@ -24,21 +24,24 @@ const MAX_IMPRESSIONS_PUBMATIC = 30
 
 const ae = "ae"
 
+const BidderPubMatic = "pubmatic"
+
 type PubmaticAdapter struct {
 	URI        string
 	bidderName string
 }
 
 type pubmaticBidExt struct {
-	BidType            *int                 `json:"BidType,omitempty"`
 	VideoCreativeInfo  *pubmaticBidExtVideo `json:"video,omitempty"`
 	Marketplace        string               `json:"marketplace,omitempty"`
 	PrebidDealPriority int                  `json:"prebiddealpriority,omitempty"`
+	InBannerVideo      bool                 `json:"ibv,omitempty"`
 }
 
 type pubmaticWrapperExt struct {
-	ProfileID int `json:"profile,omitempty"`
-	VersionID int `json:"version,omitempty"`
+	ProfileID  int    `json:"profile,omitempty"`
+	VersionID  int    `json:"version,omitempty"`
+	BidderCode string `json:"biddercode,omitempty"`
 }
 
 type pubmaticBidExtVideo struct {
@@ -47,9 +50,10 @@ type pubmaticBidExtVideo struct {
 
 type ExtImpBidderPubmatic struct {
 	adapters.ExtImpBidder
-	Data json.RawMessage `json:"data,omitempty"`
-	AE   int             `json:"ae,omitempty"`
-	GpId string          `json:"gpid,omitempty"`
+	Data        json.RawMessage `json:"data,omitempty"`
+	AE          int             `json:"ae,omitempty"`
+	GpId        string          `json:"gpid,omitempty"`
+	SKAdnetwork json.RawMessage `json:"skadn,omitempty"`
 }
 
 type ExtAdServer struct {
@@ -65,7 +69,6 @@ type extRequestAdServer struct {
 	Wrapper     *pubmaticWrapperExt `json:"wrapper,omitempty"`
 	Acat        []string            `json:"acat,omitempty"`
 	Marketplace *marketplaceReqExt  `json:"marketplace,omitempty"`
-	openrtb_ext.ExtRequest
 }
 
 type respExt struct {
@@ -81,6 +84,7 @@ const (
 	AdServerKey        = "adserver"
 	PBAdslotKey        = "pbadslot"
 	gpIdKey            = "gpid"
+	skAdnetworkKey     = "skadn"
 )
 
 func (a *PubmaticAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *adapters.ExtraRequestInfo) ([]*adapters.RequestData, []error) {
@@ -89,6 +93,11 @@ func (a *PubmaticAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	pubID := ""
 	extractWrapperExtFromImp := true
 	extractPubIDFromImp := true
+
+	displayManager, displayManagerVer := "", ""
+	if request.App != nil && request.App.Ext != nil {
+		displayManager, displayManagerVer = getDisplayManagerAndVer(request.App)
+	}
 
 	newReqExt, err := extractPubmaticExtFromRequest(request)
 	if err != nil {
@@ -100,7 +109,7 @@ func (a *PubmaticAdapter) MakeRequests(request *openrtb2.BidRequest, reqInfo *ad
 	}
 
 	for i := 0; i < len(request.Imp); i++ {
-		wrapperExtFromImp, pubIDFromImp, err := parseImpressionObject(&request.Imp[i], extractWrapperExtFromImp, extractPubIDFromImp)
+		wrapperExtFromImp, pubIDFromImp, err := parseImpressionObject(&request.Imp[i], extractWrapperExtFromImp, extractPubIDFromImp, displayManager, displayManagerVer)
 
 		// If the parsing is failed, remove imp and add the error.
 		if err != nil {
@@ -247,7 +256,7 @@ func assignBannerWidthAndHeight(banner *openrtb2.Banner, w, h int64) *openrtb2.B
 }
 
 // parseImpressionObject parse the imp to get it ready to send to pubmatic
-func parseImpressionObject(imp *openrtb2.Imp, extractWrapperExtFromImp, extractPubIDFromImp bool) (*pubmaticWrapperExt, string, error) {
+func parseImpressionObject(imp *openrtb2.Imp, extractWrapperExtFromImp, extractPubIDFromImp bool, displayManager, displayManagerVer string) (*pubmaticWrapperExt, string, error) {
 	var wrapExt *pubmaticWrapperExt
 	var pubID string
 
@@ -258,6 +267,12 @@ func parseImpressionObject(imp *openrtb2.Imp, extractWrapperExtFromImp, extractP
 
 	if imp.Audio != nil {
 		imp.Audio = nil
+	}
+
+	// Populate imp.displaymanager and imp.displaymanagerver if the SDK failed to do it.
+	if imp.DisplayManager == "" && imp.DisplayManagerVer == "" && displayManager != "" && displayManagerVer != "" {
+		imp.DisplayManager = displayManager
+		imp.DisplayManagerVer = displayManagerVer
 	}
 
 	var bidderExt ExtImpBidderPubmatic
@@ -326,6 +341,10 @@ func parseImpressionObject(imp *openrtb2.Imp, extractWrapperExtFromImp, extractP
 		extMap[gpIdKey] = bidderExt.GpId
 	}
 
+	if bidderExt.SKAdnetwork != nil {
+		extMap[skAdnetworkKey] = bidderExt.SKAdnetwork
+	}
+
 	imp.Ext = nil
 	if len(extMap) > 0 {
 		ext, err := json.Marshal(extMap)
@@ -351,7 +370,6 @@ func extractPubmaticExtFromRequest(request *openrtb2.BidRequest) (extRequestAdSe
 	if err != nil {
 		return pmReqExt, fmt.Errorf("error decoding Request.ext : %s", err.Error())
 	}
-	pmReqExt.ExtRequest = *reqExt
 
 	reqExtBidderParams := make(map[string]json.RawMessage)
 	if reqExt.Prebid.BidderParams != nil {
@@ -369,6 +387,19 @@ func extractPubmaticExtFromRequest(request *openrtb2.BidRequest) (extRequestAdSe
 			return pmReqExt, err
 		}
 		pmReqExt.Wrapper = wrpExt
+	}
+
+	if pmReqExt.Wrapper == nil {
+		pmReqExt.Wrapper = &pubmaticWrapperExt{}
+	}
+
+	// Always set bidder code to default
+	pmReqExt.Wrapper.BidderCode = BidderPubMatic
+
+	// Override bidder code if alias exists
+	for alias := range reqExt.Prebid.Aliases {
+		pmReqExt.Wrapper.BidderCode = alias
+		break
 	}
 
 	if acatBytes, ok := reqExtBidderParams["acat"]; ok {
@@ -452,19 +483,25 @@ func (a *PubmaticAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externa
 				bid.Cat = bid.Cat[0:1]
 			}
 
+			mType, err := getMediaTypeForBid(&bid)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+
 			typedBid := &adapters.TypedBid{
 				Bid:      &bid,
-				BidType:  openrtb_ext.BidTypeBanner,
 				BidVideo: &openrtb_ext.ExtBidPrebidVideo{},
+				BidType:  mType,
 			}
 
 			var bidExt *pubmaticBidExt
-			err := jsonutil.Unmarshal(bid.Ext, &bidExt)
+			err = jsonutil.Unmarshal(bid.Ext, &bidExt)
 			if err != nil {
 				errs = append(errs, err)
 			} else if bidExt != nil {
 				typedBid.Seat = openrtb_ext.BidderName(bidExt.Marketplace)
-				typedBid.BidType = getBidType(bidExt)
+
 				if bidExt.PrebidDealPriority > 0 {
 					typedBid.DealPriority = bidExt.PrebidDealPriority
 				}
@@ -472,9 +509,14 @@ func (a *PubmaticAdapter) MakeBids(internalRequest *openrtb2.BidRequest, externa
 				if bidExt.VideoCreativeInfo != nil && bidExt.VideoCreativeInfo.Duration != nil {
 					typedBid.BidVideo.Duration = *bidExt.VideoCreativeInfo.Duration
 				}
+
+				typedBid.BidMeta = &openrtb_ext.ExtBidPrebidMeta{MediaType: string(mType)}
+				if bidExt.InBannerVideo {
+					typedBid.BidMeta.MediaType = string(openrtb_ext.BidTypeVideo)
+				}
 			}
 
-			if typedBid.BidType == openrtb_ext.BidTypeNative {
+			if mType == openrtb_ext.BidTypeNative {
 				bid.AdM, err = getNativeAdm(bid.AdM)
 				if err != nil {
 					errs = append(errs, err)
@@ -628,24 +670,27 @@ func getStringArray(array []interface{}) []string {
 	return aString
 }
 
-// getBidType returns the bid type specified in the response bid.ext
-func getBidType(bidExt *pubmaticBidExt) openrtb_ext.BidType {
+// getMediaTypeForBid returns the Mtype
+func getMediaTypeForBid(bid *openrtb2.Bid) (openrtb_ext.BidType, error) {
 	// setting "banner" as the default bid type
-	bidType := openrtb_ext.BidTypeBanner
-	if bidExt != nil && bidExt.BidType != nil {
-		switch *bidExt.BidType {
-		case 0:
-			bidType = openrtb_ext.BidTypeBanner
-		case 1:
-			bidType = openrtb_ext.BidTypeVideo
-		case 2:
-			bidType = openrtb_ext.BidTypeNative
+	mType := openrtb_ext.BidTypeBanner
+	if bid != nil {
+		switch bid.MType {
+		case openrtb2.MarkupBanner:
+			mType = openrtb_ext.BidTypeBanner
+		case openrtb2.MarkupVideo:
+			mType = openrtb_ext.BidTypeVideo
+		case openrtb2.MarkupAudio:
+			mType = openrtb_ext.BidTypeAudio
+		case openrtb2.MarkupNative:
+			mType = openrtb_ext.BidTypeNative
 		default:
-			// default value is banner
-			bidType = openrtb_ext.BidTypeBanner
+			return "", &errortypes.BadServerResponse{
+				Message: fmt.Sprintf("failed to parse bid mtype (%d) for impression id %s", bid.MType, bid.ImpID),
+			}
 		}
 	}
-	return bidType
+	return mType, nil
 }
 
 // Builder builds a new instance of the Pubmatic adapter for the given bidder with the given config.
@@ -655,4 +700,20 @@ func Builder(bidderName openrtb_ext.BidderName, config config.Adapter, server co
 		bidderName: string(bidderName),
 	}
 	return bidder, nil
+}
+
+// getDisplayManagerAndVer returns the display manager and version from the request.app.ext or request.app.prebid.ext source and version
+func getDisplayManagerAndVer(app *openrtb2.App) (string, string) {
+	if source, err := jsonparser.GetString(app.Ext, openrtb_ext.PrebidExtKey, "source"); err == nil && source != "" {
+		if version, err := jsonparser.GetString(app.Ext, openrtb_ext.PrebidExtKey, "version"); err == nil && version != "" {
+			return source, version
+		}
+	}
+
+	if source, err := jsonparser.GetString(app.Ext, "source"); err == nil && source != "" {
+		if version, err := jsonparser.GetString(app.Ext, "version"); err == nil && version != "" {
+			return source, version
+		}
+	}
+	return "", ""
 }

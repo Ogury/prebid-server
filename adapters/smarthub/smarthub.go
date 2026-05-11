@@ -7,12 +7,12 @@ import (
 	"text/template"
 
 	"github.com/prebid/openrtb/v20/openrtb2"
-	"github.com/prebid/prebid-server/v3/adapters"
-	"github.com/prebid/prebid-server/v3/config"
-	"github.com/prebid/prebid-server/v3/errortypes"
-	"github.com/prebid/prebid-server/v3/macros"
-	"github.com/prebid/prebid-server/v3/openrtb_ext"
-	"github.com/prebid/prebid-server/v3/util/jsonutil"
+	"github.com/prebid/prebid-server/v4/adapters"
+	"github.com/prebid/prebid-server/v4/config"
+	"github.com/prebid/prebid-server/v4/errortypes"
+	"github.com/prebid/prebid-server/v4/macros"
+	"github.com/prebid/prebid-server/v4/openrtb_ext"
+	"github.com/prebid/prebid-server/v4/util/jsonutil"
 )
 
 const (
@@ -60,10 +60,11 @@ func (a *adapter) getImpressionExt(imp *openrtb2.Imp) (*openrtb_ext.ExtSmartHub,
 
 func (a *adapter) buildEndpointURL(params *openrtb_ext.ExtSmartHub) (string, error) {
 	endpointParams := macros.EndpointTemplateParams{
-		Host:      params.PartnerName,
 		AccountID: params.Seat,
 		SourceId:  params.Token,
+		Host:      params.PartnerName,
 	}
+
 	return macros.ResolveMacros(a.endpoint, endpointParams)
 }
 
